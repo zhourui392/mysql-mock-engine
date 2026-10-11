@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cn.vv.test</groupId>
+    <artifactId>mysql-mock-engine</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>mysql-mock-engine</name>
+    <description>JVM 内存 MySQL 模拟引擎（JDK 8+）：真实 DDL 装载 + 内存存储 + Calcite 查询 + 自有 DML，一等接入 JUnit 5 + Mockito 单测</description>
+
+    <modules>
+        <module>mysql-mock-api</module>
+        <module>mysql-mock-schema</module>
+        <module>mysql-mock-storage</module>
+        <module>mysql-mock-calcite</module>
+        <module>mysql-mock-jdbc</module>
+        <module>mysql-mock-mybatis</module>
+        <module>mysql-mock-junit5</module>
+        <module>mysql-mock-compatibility-tests</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
+        <calcite.version>1.42.0</calcite.version>
+        <shardingsphere-sql-parser.version>5.3.2</shardingsphere-sql-parser.version>
+        <snakeyaml.version>1.33</snakeyaml.version>
+        <slf4j.version>1.7.33</slf4j.version>
+        <mybatis.version>3.5.7</mybatis.version>
+        <mybatis-plus.version>3.4.3.4</mybatis-plus.version>
+        <!-- junit5 模块编译基线：Boot 2.1.3 BOM 调停后的消费方 api 版本（D-05/方案 §3.7） -->
+        <junit-api-baseline.version>5.3.2</junit-api-baseline.version>
+        <junit-jupiter.version>5.10.2</junit-jupiter.version>
+        <mockito.version>2.23.4</mockito.version>
+
+        <shade.package.base>cn.vv.test.shaded</shade.package.base>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-api</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-schema</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-storage</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-calcite</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-jdbc</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-mybatis</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-junit5</artifactId><version>${project.version}</version></dependency>
+
+            <dependency><groupId>org.apache.calcite</groupId><artifactId>calcite-core</artifactId><version>${calcite.version}</version></dependency>
+            <dependency><groupId>org.apache.shardingsphere</groupId><artifactId>shardingsphere-sql-parser-mysql</artifactId><version>${shardingsphere-sql-parser.version}</version></dependency>
+            <dependency><groupId>org.yaml</groupId><artifactId>snakeyaml</artifactId><version>${snakeyaml.version}</version></dependency>
+            <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId><version>${slf4j.version}</version></dependency>
+            <dependency><groupId>org.mybatis</groupId><artifactId>mybatis</artifactId><version>${mybatis.version}</version></dependency>
+            <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-core</artifactId><version>${mybatis-plus.version}</version></dependency>
+            <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-extension</artifactId><version>${mybatis-plus.version}</version></dependency>
+            <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-annotation</artifactId><version>${mybatis-plus.version}</version></dependency>
+
+            <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter-api</artifactId><version>${junit-jupiter.version}</version></dependency>
+            <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit-jupiter.version}</version></dependency>
+            <dependency><groupId>org.mockito</groupId><artifactId>mockito-core</artifactId><version>${mockito.version}</version></dependency>
+            <dependency><groupId>org.mockito</groupId><artifactId>mockito-junit-jupiter</artifactId><version>${mockito.version}</version></dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- 所有模块共享的测试依赖（Boot 2.1 消费方先例：starter-test 不带 jupiter，显式引入） -->
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.8.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.5</version>
+                </plugin>
+                <!-- D-12：对外工件 shade 隔离全部第三方依赖，消费方依赖树零新增（在 mysql-mock-mybatis / junit5 激活） -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.2.4</version>
+                    <executions>
+                        <execution>
+                            <phase>package</phase>
+                            <goals><goal>shade</goal></goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <createDependencyReducedPom>true</createDependencyReducedPom>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <excludes>
+                                    <exclude>META-INF/*.SF</exclude>
+                                    <exclude>META-INF/*.DSA</exclude>
+                                    <exclude>META-INF/*.RSA</exclude>
+                                    <exclude>module-info.class</exclude>
+                                    <exclude>META-INF/versions/**</exclude>
+                                </excludes>
+                            </filter>
+                            <!-- 纯注解工件不打包（运行期缺注解被 JVM 忽略） -->
+                            <filter><artifact>org.checkerframework:checker-qual</artifact><excludes><exclude>**</exclude></excludes></filter>
+                            <filter><artifact>com.google.errorprone:error_prone_annotations</artifact><excludes><exclude>**</exclude></excludes></filter>
+                            <filter><artifact>org.apiguardian:apiguardian-api</artifact><excludes><exclude>**</exclude></excludes></filter>
+                        </filters>
+                        <transformers>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                        </transformers>
+                        <relocations>
+                            <relocation><pattern>org.apache.calcite</pattern><shadedPattern>${shade.package.base}.org.apache.calcite</shadedPattern></relocation>
+                            <relocation><pattern>org.apache.shardingsphere</pattern><shadedPattern>${shade.package.base}.org.apache.shardingsphere</shadedPattern></relocation>
+                            <relocation><pattern>org.antlr</pattern><shadedPattern>${shade.package.base}.org.antlr</shadedPattern></relocation>
+                            <relocation><pattern>org.yaml</pattern><shadedPattern>${shade.package.base}.org.yaml</shadedPattern></relocation>
+                            <relocation><pattern>org.apache.groovy</pattern><shadedPattern>${shade.package.base}.org.apache.groovy</shadedPattern></relocation>
+                            <relocation><pattern>groovy</pattern><shadedPattern>${shade.package.base}.groovy</shadedPattern></relocation>
+                            <relocation><pattern>org.apache.commons</pattern><shadedPattern>${shade.package.base}.org.apache.commons</shadedPattern></relocation>
+                            <relocation><pattern>org.codehaus.janino</pattern><shadedPattern>${shade.package.base}.org.codehaus.janino</shadedPattern></relocation>
+                            <relocation><pattern>net.hydromatic</pattern><shadedPattern>${shade.package.base}.net.hydromatic</shadedPattern></relocation>
+                            <relocation><pattern>org.locationtech</pattern><shadedPattern>${shade.package.base}.org.locationtech</shadedPattern></relocation>
+                            <relocation><pattern>com.yahoo</pattern><shadedPattern>${shade.package.base}.com.yahoo</shadedPattern></relocation>
+                            <relocation><pattern>com.jayway</pattern><shadedPattern>${shade.package.base}.com.jayway</shadedPattern></relocation>
+                            <relocation><pattern>com.oracle.truffle</pattern><shadedPattern>${shade.package.base}.com.oracle.truffle</shadedPattern></relocation>
+                            <relocation><pattern>com.github.benmanes.caffeine</pattern><shadedPattern>${shade.package.base}.com.github.benmanes.caffeine</shadedPattern></relocation>
+                            <relocation><pattern>com.fasterxml.jackson</pattern><shadedPattern>${shade.package.base}.com.fasterxml.jackson</shadedPattern></relocation>
+                            <relocation><pattern>com.google.common</pattern><shadedPattern>${shade.package.base}.com.google.common</shadedPattern></relocation>
+                            <relocation><pattern>com.google.thirdparty</pattern><shadedPattern>${shade.package.base}.com.google.thirdparty</shadedPattern></relocation>
+                            <relocation><pattern>org.slf4j</pattern><shadedPattern>${shade.package.base}.org.slf4j</shadedPattern></relocation>
+                        </relocations>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

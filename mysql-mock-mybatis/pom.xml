@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cn.vv.test</groupId>
+        <artifactId>mysql-mock-engine</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>mysql-mock-mybatis</artifactId>
+    <name>mysql-mock-mybatis</name>
+    <description>无 Spring 的 MyBatis / MyBatis-Plus 装配助手（D-05 一等接入）；对外工件，shade 隔离（D-12）</description>
+
+    <dependencies>
+        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-jdbc</artifactId></dependency>
+        <!-- 消费方自带，不进 uber jar -->
+        <dependency><groupId>org.mybatis</groupId><artifactId>mybatis</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-core</artifactId><scope>provided</scope></dependency>
+        <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-extension</artifactId><scope>provided</scope></dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

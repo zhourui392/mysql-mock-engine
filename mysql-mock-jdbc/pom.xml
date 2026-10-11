@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cn.vv.test</groupId>
+        <artifactId>mysql-mock-engine</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>mysql-mock-jdbc</artifactId>
+    <name>mysql-mock-jdbc</name>
+    <description>自有 JDBC 边界：DataSource/Connection/PreparedStatement/ResultSet/DatabaseMetaData（事务仅自动提交，D-14）</description>
+
+    <dependencies>
+        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-api</artifactId></dependency>
+        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-calcite</artifactId></dependency>
+    </dependencies>
+</project>

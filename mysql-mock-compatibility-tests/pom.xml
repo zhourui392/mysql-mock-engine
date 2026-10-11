@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cn.vv.test</groupId>
+        <artifactId>mysql-mock-engine</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>mysql-mock-compatibility-tests</artifactId>
+    <name>mysql-mock-compatibility-tests</name>
+    <description>消费方视角验证：jupiter 5.10.2 + mockito 2.23.4 + MyBatis-Plus 3.4.3.4；字节码门禁与 shade 零新增断言</description>
+
+    <dependencies>
+        <!-- 消费方依赖形态（test 域），对应方案 §4 兼容矩阵两档 -->
+        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-junit5</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.mockito</groupId><artifactId>mockito-core</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.mockito</groupId><artifactId>mockito-junit-jupiter</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.mybatis</groupId><artifactId>mybatis</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-core</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-extension</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-annotation</artifactId><scope>test</scope></dependency>
+    </dependencies>
+</project>

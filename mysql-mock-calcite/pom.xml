@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cn.vv.test</groupId>
+        <artifactId>mysql-mock-engine</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>mysql-mock-calcite</artifactId>
+    <name>mysql-mock-calcite</name>
+    <description>查询引擎适配（Calcite 1.42.0）+ 引擎实现：SELECT 走 Calcite，DML 走自有执行器，生成列求值</description>
+
+    <dependencies>
+        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-api</artifactId></dependency>
+        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-schema</artifactId></dependency>
+        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-storage</artifactId></dependency>
+        <dependency><groupId>org.apache.calcite</groupId><artifactId>calcite-core</artifactId></dependency>
+    </dependencies>
+</project>
