@@ -88,10 +88,17 @@ class SelectExecutionTest {
     }
 
     @Test
-    void timestampPrecisionPreservedInSelect() {
+    void timestampSemanticsInSelect() {
+        // 无精度 DATETIME：装载即按 MySQL 秒级四舍五入（差分对齐）
         QueryResult result = engine.query(
                 "SELECT created_at FROM vv_pc_sku_unit WHERE id = 11");
-        assertEquals(java.sql.Timestamp.valueOf("2026-01-02 03:04:05.678"),
+        assertEquals(java.sql.Timestamp.valueOf("2026-01-02 03:04:06"),
                 result.rows().get(0)[0]);
+        // 声明 DATETIME(3)：毫秒精度保留（D-08）
+        engine.executeDdl("CREATE TABLE `t_prec` (`id` BIGINT NOT NULL AUTO_INCREMENT, "
+                + "`ts` DATETIME(3) NULL, PRIMARY KEY (`id`))");
+        engine.execute("INSERT INTO t_prec (ts) VALUES ('2026-01-02 03:04:05.678')");
+        assertEquals(java.sql.Timestamp.valueOf("2026-01-02 03:04:05.678"),
+                engine.query("SELECT ts FROM t_prec WHERE id = 1").rows().get(0)[0]);
     }
 }

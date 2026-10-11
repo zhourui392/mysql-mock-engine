@@ -61,7 +61,10 @@ class InsertExecutionTest {
         assertEquals("852", values[0], "phone_dial 缺省默认值");
         assertEquals("active", values[1], "status 语义默认值");
         assertEquals("1", values[2], "生成列 occupies_unique=IF(status='active','1',NULL)");
-        assertEquals(Timestamp.from(FIXED), values[3], "CURRENT_TIMESTAMP 默认取引擎时钟（D-09）");
+        // created_at 无精度声明：CURRENT_TIMESTAMP 默认值按 MySQL 秒级四舍五入（.567 → +1s）
+        long rawMillis = Timestamp.from(FIXED).getTime();
+        assertEquals(new Timestamp(((rawMillis + 500) / 1000) * 1000), values[3],
+                "CURRENT_TIMESTAMP 默认取引擎时钟（D-09）并按秒舍入");
     }
 
     @Test
@@ -95,12 +98,21 @@ class InsertExecutionTest {
 
     @Test
     void notNullViolationRejected() {
-        MysqlMockException e = assertThrows(MysqlMockException.class,
+        // MySQL 语义：缺列且 NOT NULL 无默认 → 1364（差分对齐 MySQL 9.x/8.0 实测）
+        MysqlMockException missing = assertThrows(MysqlMockException.class,
                 () -> engine.execute("INSERT INTO dine_customer (tenant_code, nickname) "
                         + "VALUES ('T1', 'NoShop')"));
-        assertEquals(MysqlMockException.ER_BAD_NULL_ERROR, e.vendorCode());
-        assertEquals("23000", e.sqlState());
-        assertTrue(e.getMessage().contains("shop_id"));
+        assertEquals(MysqlMockException.ER_NO_DEFAULT_FOR_FIELD, missing.vendorCode());
+        assertTrue(missing.getMessage().contains("shop_id"));
+        assertEquals(0L, engine.query("SELECT COUNT(*) FROM dine_customer").rows().get(0)[0]);
+
+        // 显式插 NULL → 1048/23000
+        MysqlMockException explicit = assertThrows(MysqlMockException.class,
+                () -> engine.execute("INSERT INTO dine_customer (tenant_code, shop_id, nickname) "
+                        + "VALUES ('T1', NULL, 'NoShop')"));
+        assertEquals(MysqlMockException.ER_BAD_NULL_ERROR, explicit.vendorCode());
+        assertEquals("23000", explicit.sqlState());
+        assertTrue(explicit.getMessage().contains("shop_id"));
     }
 
     @Test
@@ -155,6 +167,7 @@ class InsertExecutionTest {
         assertEquals(new BigDecimal("100.000"), ratio);
         Object created = engine.query("SELECT created_at FROM vv_pc_sku_unit WHERE id = 11")
                 .rows().get(0)[0];
-        assertEquals(Timestamp.valueOf("2026-01-02 03:04:05.678"), created, "毫秒精度保留（D-08）");
+        assertEquals(Timestamp.valueOf("2026-01-02 03:04:06"), created,
+                "无精度 DATETIME 按 MySQL 秒级四舍五入（.678 → 06）");
     }
 }

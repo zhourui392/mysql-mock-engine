@@ -6,8 +6,9 @@ Spring Boot 2.1.3 / MyBatis-Plus 3.4.3.4 服务的 **JUnit + Mockito 纯单测**
 
 ## 状态
 
-阶段 1–3 完成（2026-10-11，`mvn clean install` 全绿，89 tests）；阶段 4（Spring Boot
-starter、差分兼容、发布）按方案后置。
+阶段 1–4 完成（2026-10-11）：`mvn clean install` 全绿（98 tests）；差分兼容
+`mvn -pl mysql-mock-compatibility-tests test -Pcompat` 对照真实 MySQL（PASS 11/0，
+需 docker；本机基准 mysql:latest=9.5.0，CI 应钉 mysql:8.0 复跑）。
 
 | 模块 | 内容 | 状态 |
 |---|---|---|
@@ -18,7 +19,9 @@ starter、差分兼容、发布）按方案后置。
 | `mysql-mock-jdbc` | DataSource/Connection/ResultSet/DatabaseMetaData（`jdbc:mysql:mock:`） | ✅ 15 tests |
 | `mysql-mock-mybatis` | 无 Spring 的 MyBatis/MyBatis-Plus 装配助手 | ✅ 7 tests |
 | `mysql-mock-junit5` | `@MysqlMockTest` 扩展（jupiter-api 5.3.2 基线，RECREATE/SNAPSHOT 隔离） | ✅ 5 tests |
-| `mysql-mock-compatibility-tests` | 消费方依赖形态的兼容/字节码/零新增门禁 | ✅ 6 tests |
+| `mysql-mock-spring-boot-autoconfigure` | Boot 装配（模式 B 创建 / 模式 A 接管，D-04）+ TestExecutionListener | ✅ |
+| `mysql-mock-spring-boot-starter` | 经典空壳 starter | ✅ |
+| `mysql-mock-compatibility-tests` | 消费方形态门禁 + T14 Boot 装配 + `-Pcompat` 差分 | ✅ 14 tests（+差分 9） |
 
 ## 构建与测试
 
@@ -71,5 +74,13 @@ SqlSessionFactory factory = MysqlMockMybatis.builder(engine)
 - 未支持语法显式失败（strict），错误码对齐 MySQL（1062 / 1146 / 1235 等）。
 - 对外工件（mybatis / junit5 模块）shade + relocate 全部第三方依赖，消费方依赖树零新增。
 
+```properties
+# Spring Boot（@SpringBootTest）形态：无真实库配置即可装配
+mysql-mock.enabled=true
+mysql-mock.schema[0]=classpath:mysql/schema.sql
+mysql-mock.datasets[0]=classpath:datasets/data.yml
+# mysql-mock.replace-datasource-bean=legacyDs   # 模式 A：显式接管既有 DataSource Bean
+```
+
 方案全文与决策记录（D-01～D-16）见 `docs/designs/2026-10-11-mysql-mock-engine/`；
-逐项验收证据见同目录 `验证记录.md`（T0–T15）。
+逐项验收证据见同目录 `验证记录.md`（T0–T15 + 差分报告）。

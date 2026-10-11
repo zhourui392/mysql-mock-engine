@@ -443,10 +443,13 @@ final class ModificationExecutor {
             }
             if (column.hasDefault()) {
                 if (column.defaultCurrentTimestamp()) {
-                    full[i] = Timestamp.valueOf(LocalDateTime.now(clock));
+                    full[i] = coerce(column, Timestamp.valueOf(LocalDateTime.now(clock)));
                 } else {
                     full[i] = coerce(column, column.defaultValue());
                 }
+            } else if (column.notNull() && !column.autoIncrement()) {
+                // MySQL 语义：缺列且 NOT NULL 无默认 → 1364（显式插 NULL 才是 1048）
+                throw MysqlMockException.noDefaultValue(column.name(), definition.name());
             }
         }
     }

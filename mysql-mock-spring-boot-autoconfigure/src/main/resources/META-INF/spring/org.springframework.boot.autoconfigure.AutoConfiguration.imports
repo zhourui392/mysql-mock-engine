@@ -1,0 +1,2 @@
+# Boot 2.7+/3.x 注册轨（随包发布，不做运行验证，OQ-4/D-04）
+cn.vv.test.mysqlmock.boot.MysqlMockAutoConfiguration

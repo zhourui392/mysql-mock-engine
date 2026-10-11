@@ -1,0 +1,6 @@
+# Boot 2.1-2.6 注册轨（D-04：不用 @AutoConfiguration 注解）
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  cn.vv.test.mysqlmock.boot.MysqlMockAutoConfiguration
+# D-06：TestContext 缓存解耦的状态复位（@SpringBootTest 形态）
+org.springframework.test.context.TestExecutionListener=\
+  cn.vv.test.mysqlmock.boot.MysqlMockTestExecutionListener

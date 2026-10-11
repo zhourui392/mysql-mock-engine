@@ -8,6 +8,7 @@ public class MysqlMockException extends RuntimeException {
     public static final int ER_NO_SUCH_TABLE = 1146;
     public static final int ER_PARSE_ERROR = 1064;
     public static final int ER_NOT_SUPPORTED = 1235;
+    public static final int ER_NO_DEFAULT_FOR_FIELD = 1364;
 
     private final int vendorCode;
     private final String sqlState;
@@ -45,6 +46,12 @@ public class MysqlMockException extends RuntimeException {
     public static MysqlMockException parseError(String detail, Throwable cause) {
         return new MysqlMockException("You have an error in your SQL syntax: " + detail,
                 ER_PARSE_ERROR, "42000", cause);
+    }
+
+    /** MySQL 语义：INSERT 缺列且该列 NOT NULL 无默认值（区别于显式 NULL 的 1048）。 */
+    public static MysqlMockException noDefaultValue(String column, String table) {
+        return new MysqlMockException("Field '" + column + "' doesn't have a default value (table "
+                + table + ")", ER_NO_DEFAULT_FOR_FIELD, "HY000");
     }
 
     /** strict：未支持特性显式失败，不静默（R9）。 */

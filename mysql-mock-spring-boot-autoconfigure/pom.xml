@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cn.vv.test</groupId>
+        <artifactId>mysql-mock-engine</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>mysql-mock-spring-boot-autoconfigure</artifactId>
+    <name>mysql-mock-spring-boot-autoconfigure</name>
+    <description>Spring Boot 装配（D-04）：模式 B（缺省 DataSource 创建）/ 模式 A（显式接管 bean），
+        双轨注册 spring.factories + .imports；依赖 spring 均为 provided（消费方 Boot 自带）</description>
+
+    <dependencies>
+        <!-- 引擎全量（shaded uber：jdbc/calcite/schema/storage/api 内联，第三方已 relocate，D-12） -->
+        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-junit5</artifactId></dependency>
+        <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId><scope>provided</scope></dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <version>2.1.3.RELEASE</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>5.1.3.RELEASE</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -19,6 +19,8 @@
         <module>mysql-mock-jdbc</module>
         <module>mysql-mock-mybatis</module>
         <module>mysql-mock-junit5</module>
+        <module>mysql-mock-spring-boot-autoconfigure</module>
+        <module>mysql-mock-spring-boot-starter</module>
         <module>mysql-mock-compatibility-tests</module>
     </modules>
 
@@ -50,6 +52,8 @@
             <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-jdbc</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-mybatis</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-junit5</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-spring-boot-autoconfigure</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-spring-boot-starter</artifactId><version>${project.version}</version></dependency>
 
             <dependency><groupId>org.apache.calcite</groupId><artifactId>calcite-core</artifactId><version>${calcite.version}</version></dependency>
             <dependency><groupId>org.apache.shardingsphere</groupId><artifactId>shardingsphere-sql-parser-mysql</artifactId><version>${shardingsphere-sql-parser.version}</version></dependency>

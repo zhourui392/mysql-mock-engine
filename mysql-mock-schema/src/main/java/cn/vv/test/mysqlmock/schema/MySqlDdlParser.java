@@ -205,7 +205,12 @@ public final class MySqlDdlParser {
                 precision = Integer.parseInt(inner.substring(0, comma).trim());
                 scale = Integer.parseInt(inner.substring(comma + 1).trim());
             } else if (!inner.isEmpty()) {
-                precision = Integer.parseInt(inner);
+                if (type == MysqlType.DATETIME || type == MysqlType.TIMESTAMP) {
+                    // MySQL：DATETIME/TrIMESTAMP 括号是 fsp（小数秒位），非长度
+                    scale = Integer.parseInt(inner);
+                } else {
+                    precision = Integer.parseInt(inner);
+                }
             }
             pos[0] = close + 1;
         }

@@ -104,7 +104,8 @@ class JdbcEndToEndTest {
             assertTrue(rs.next());
             assertEquals(11L, rs.getLong(1));
             assertEquals(new BigDecimal("100.000"), rs.getBigDecimal("ratio_to_base"));
-            assertEquals(Timestamp.valueOf("2026-01-02 03:04:05.678"), rs.getTimestamp("created_at"));
+            // created_at 无精度声明：按 MySQL 秒级四舍五入（差分对齐，.678 → 06）
+            assertEquals(Timestamp.valueOf("2026-01-02 03:04:06"), rs.getTimestamp("created_at"));
             assertEquals("瓶", rs.getString("unit"));
             assertFalse(rs.wasNull());
         }

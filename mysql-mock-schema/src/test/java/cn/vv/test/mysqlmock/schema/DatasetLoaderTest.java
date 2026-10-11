@@ -40,9 +40,20 @@ class DatasetLoaderTest {
     }
 
     @Test
-    void coerceDatetimeKeepsMillisecondPrecision() {
+    void coerceDatetimeRoundsToSecondWithoutScale() {
         TableDefinition skuUnit = loadSkuUnit();
+        // 现网语料 created_at 无精度声明：MySQL 按秒四舍五入（.678 → +1s，差分对齐）
         Timestamp coerced = (Timestamp) MysqlValueCoercer.coerce(skuUnit.column("created_at"),
+                "2026-01-02 03:04:05.678");
+        assertEquals(Timestamp.valueOf("2026-01-02 03:04:06"), coerced);
+        assertEquals(0, coerced.getNanos());
+    }
+
+    @Test
+    void coerceDatetimeKeepsMillisecondPrecisionWithScale() throws Exception {
+        TableDefinition table = new MySqlDdlParser().parse(
+                "CREATE TABLE `t_prec` (`ts` DATETIME(3) NULL)");
+        Timestamp coerced = (Timestamp) MysqlValueCoercer.coerce(table.column("ts"),
                 "2026-01-02 03:04:05.678");
         assertEquals(Timestamp.valueOf("2026-01-02 03:04:05.678"), coerced);
         assertEquals(678, coerced.getNanos() / 1_000_000);

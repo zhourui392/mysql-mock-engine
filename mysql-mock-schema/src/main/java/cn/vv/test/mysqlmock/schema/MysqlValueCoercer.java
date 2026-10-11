@@ -75,16 +75,23 @@ public final class MysqlValueCoercer {
             }
             return java.sql.Date.valueOf(LocalDate.parse(String.valueOf(value).trim()));
         }
+        Timestamp timestamp;
         if (value instanceof Timestamp) {
-            return value;
+            timestamp = (Timestamp) value;
+        } else if (value instanceof java.util.Date) {
+            timestamp = new Timestamp(((java.util.Date) value).getTime());
+        } else if (value instanceof Number) {
+            timestamp = new Timestamp(((Number) value).longValue());
+        } else {
+            timestamp = parseTimestamp(String.valueOf(value).trim());
         }
-        if (value instanceof java.util.Date) {
-            return new Timestamp(((java.util.Date) value).getTime());
+        // MySQL 语义：无精度声明（DATETIME/TIMESTAMP 默认 scale=0）按秒四舍五入；
+        // DATETIME(n) 按 D-08 保精度
+        if (column.scale() <= 0 && timestamp.getNanos() != 0) {
+            long rounded = ((timestamp.getTime() + 500) / 1000) * 1000;
+            timestamp = new Timestamp(rounded);
         }
-        if (value instanceof Number) {
-            return new Timestamp(((Number) value).longValue());
-        }
-        return parseTimestamp(String.valueOf(value).trim());
+        return timestamp;
     }
 
     /** 支持 yyyy-MM-dd HH:mm:ss[.SSS]、yyyy-MM-dd'T'HH:mm:ss[.SSS]、yyyy-MM-dd（零点）。 */
