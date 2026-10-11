@@ -1,0 +1,75 @@
+# 引擎级测试数据集（T0/T4/T5/T6）：现网形态 + 生成列依赖
+dine_customer:
+  - id: 1
+    tenant_code: T1
+    shop_id: 100
+    nickname: Alex
+    phone_dial: 852
+    phone: "91230001"
+    status: active
+  - id: 2
+    tenant_code: T1
+    shop_id: 100
+    nickname: Bob
+    phone_dial: 852
+    phone: "91230002"
+    status: deleted
+
+dine_customer_phone:
+  - id: 101
+    shop_id: 100
+    tenant_code: T1
+    customer_id: 1
+    phone: "91230001"
+    is_default: 1
+  - id: 102
+    shop_id: 100
+    tenant_code: T1
+    customer_id: 1
+    phone: "91230002"
+    is_default: 0
+
+vv_pc_sku_unit:
+  - id: 11
+    sku_id: 1001
+    unit: 瓶
+    ratio_to_base: 100.000
+    is_default: 1
+    tenant_code: T1
+    delete_flag: 0
+    created_at: 2026-01-02 03:04:05.678
+
+t_order:
+  - id: 1
+    customer_id: 1
+    amount: 120.50
+    status: PAID
+  - id: 2
+    customer_id: 1
+    amount: 80.00
+    status: PENDING
+  - id: 3
+    customer_id: 2
+    amount: 300.00
+    status: PAID
+  - id: 4
+    customer_id: 3
+    amount: 999.99
+    status: CANCELLED
+
+t_order_item:
+  - id: 1
+    order_id: 1
+    sku: SKU-A
+    qty: 2
+    price: 60.25
+  - id: 2
+    order_id: 2
+    sku: SKU-B
+    qty: 4
+    price: 20.00
+  - id: 3
+    order_id: 3
+    sku: SKU-A
+    qty: 10
+    price: 30.00

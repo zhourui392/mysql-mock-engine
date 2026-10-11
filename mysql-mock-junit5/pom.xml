@@ -13,19 +13,32 @@
     <description>@MysqlMockTest 扩展与测试隔离（RECREATE / SNAPSHOT）；对外工件，shade 隔离（D-12）</description>
 
     <dependencies>
+        <!-- 直接前置依赖：模块内测试优先加载各模块 jar 的新鲜类，
+             避免被 mybatis 工件内联的旧类遮蔽（对消费方无影响） -->
+        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-calcite</artifactId></dependency>
+        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-jdbc</artifactId></dependency>
         <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-mybatis</artifactId></dependency>
-        <!-- 编译基线钉 api 5.3.2（消费方经 Boot 2.1.3 BOM 调停后的实际 api 版本），消费方自带 -->
+        <!-- SqlSessionFactory 注入类型；消费方自带（经 mybatis 模块 provided 不传递） -->
+        <dependency><groupId>org.mybatis</groupId><artifactId>mybatis</artifactId><scope>provided</scope></dependency>
+        <!-- 编译基线钉 api 5.3.2（消费方经 Boot 2.1.3 BOM 调停后的实际 api 版本），消费方自带；
+             junit-jupiter 聚合件 5.4.0 起才存在，测试运行沿用父 pom 的 5.10.2（兼容矩阵高档） -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
             <version>${junit-api-baseline.version}</version>
             <scope>provided</scope>
         </dependency>
-        <!-- 本模块测试跑基线 5.3.2，覆盖父 pom 继承的 5.10.2 -->
+        <!-- 本模块测试整线跑 5.3.2 基线（engine/launcher 与 api 同代，避免与聚合件 5.10.2 混版） -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>junit-jupiter-engine</artifactId>
             <version>${junit-api-baseline.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <version>1.3.2</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -35,6 +48,28 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
+                <configuration>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                                <exclude>module-info.class</exclude>
+                                <exclude>META-INF/versions/**</exclude>
+                            </excludes>
+                        </filter>
+                        <!-- mybatis 工件内的重定位副本由本模块对原始依赖重新 shade 生成；
+                             二次重定位会推动近限常量池溢出（SqlFunctions 65536） -->
+                        <filter>
+                            <artifact>cn.vv.test:mysql-mock-mybatis</artifact>
+                            <excludes>
+                                <exclude>cn/vv/test/shaded/**</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
             </plugin>
         </plugins>
     </build>

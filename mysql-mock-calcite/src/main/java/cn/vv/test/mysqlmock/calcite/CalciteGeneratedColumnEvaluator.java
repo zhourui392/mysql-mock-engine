@@ -85,7 +85,7 @@ public final class CalciteGeneratedColumnEvaluator implements GeneratedColumnEva
     private boolean isWhitelisted(SqlOperator operator) {
         SqlKind kind = operator.getKind();
         switch (kind) {
-            case OTHER:
+            case OTHER_FUNCTION:
                 return operator.getName().equalsIgnoreCase("IF");
             case EQUALS:
             case NOT_EQUALS:
@@ -102,7 +102,7 @@ public final class CalciteGeneratedColumnEvaluator implements GeneratedColumnEva
             case MINUS:
             case TIMES:
             case DIVIDE:
-            case NEGATE:
+            case MINUS_PREFIX:
                 return true;
             default:
                 return false;
@@ -115,6 +115,9 @@ public final class CalciteGeneratedColumnEvaluator implements GeneratedColumnEva
         }
         if (node instanceof SqlLiteral) {
             Object value = ((SqlLiteral) node).getValue();
+            if (value instanceof org.apache.calcite.util.NlsString) {
+                return ((org.apache.calcite.util.NlsString) value).getValue();
+            }
             return value instanceof java.math.BigInteger || value instanceof Integer
                     ? ((Number) value).longValue()
                     : value;
@@ -130,7 +133,7 @@ public final class CalciteGeneratedColumnEvaluator implements GeneratedColumnEva
             SqlCall call = (SqlCall) node;
             String name = call.getOperator().getName().toUpperCase(Locale.ROOT);
             switch (call.getOperator().getKind()) {
-                case OTHER:
+                case OTHER_FUNCTION:
                     if (name.equals("IF") && call.operandCount() == 3) {
                         Object condition = eval(call.getOperandList().get(0), table, currentValues);
                         return isTruthy(condition)
@@ -168,7 +171,7 @@ public final class CalciteGeneratedColumnEvaluator implements GeneratedColumnEva
                 case TIMES:
                 case DIVIDE:
                     return evalArithmetic(call, table, currentValues);
-                case NEGATE:
+                case MINUS_PREFIX:
                     Object value = eval(call.getOperandList().get(0), table, currentValues);
                     if (value == null) {
                         return null;

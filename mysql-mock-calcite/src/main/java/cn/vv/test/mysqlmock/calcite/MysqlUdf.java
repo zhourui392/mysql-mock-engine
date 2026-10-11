@@ -4,20 +4,36 @@ import java.sql.Date;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 
-/** MySQL 风格 UDF（fun=all 未覆盖的部分）：NOW / CURDATE / DATE_FORMAT / IF。 */
+/**
+ * MySQL 风格 UDF（fun=all 未覆盖的部分）：NOW / CURDATE / DATE_FORMAT。
+ * <p>IF 不注册：fun=all 的 BIG_QUERY 库已提供 IF(cond, a, b)（cond 非 TRUE 即取 else 分支，
+ * 与 MySQL NULL 视作假一致）。
+ *
+ * @author zhourui(V33215020)
+ * @since 2026-10-11
+ */
 public final class MysqlUdf {
 
     private MysqlUdf() {
     }
 
+    /** 当前时间戳。 */
     public static Timestamp now() {
         return new Timestamp(System.currentTimeMillis());
     }
 
+    /** 当前日期。 */
     public static Date curdate() {
         return new Date(System.currentTimeMillis());
     }
 
+    /**
+     * MySQL DATE_FORMAT。
+     *
+     * @param timestamp 时间值
+     * @param pattern   MySQL 格式串（如 '%Y-%m-%d %H:%i:%s'）
+     * @return 格式化结果
+     */
     public static String date_format(Timestamp timestamp, String pattern) {
         if (timestamp == null || pattern == null) {
             return null;
@@ -26,23 +42,12 @@ public final class MysqlUdf {
         return mysqlFormat.format(timestamp);
     }
 
-    public static String if_(Boolean condition, String thenValue, String elseValue) {
-        return Boolean.TRUE.equals(condition) ? thenValue : elseValue;
-    }
-
-    public static Long if_(Boolean condition, Long thenValue, Long elseValue) {
-        return Boolean.TRUE.equals(condition) ? thenValue : elseValue;
-    }
-
-    public static java.math.BigDecimal if_(Boolean condition, java.math.BigDecimal thenValue, java.math.BigDecimal elseValue) {
-        return Boolean.TRUE.equals(condition) ? thenValue : elseValue;
-    }
-
-    public static Long if_(Boolean condition, Long thenValue, java.math.BigDecimal elseValue) {
-        return Boolean.TRUE.equals(condition) ? thenValue : null;
-    }
-
-    /** MySQL 格式串 → Java SimpleDateFormat 模式（覆盖常用子集）。 */
+    /**
+     * MySQL 格式串 → Java SimpleDateFormat 模式（覆盖常用子集）。
+     *
+     * @param mysqlPattern MySQL 格式串
+     * @return Java 模式
+     */
     static String toJavaPattern(String mysqlPattern) {
         StringBuilder sb = new StringBuilder();
         char[] chars = mysqlPattern.toCharArray();

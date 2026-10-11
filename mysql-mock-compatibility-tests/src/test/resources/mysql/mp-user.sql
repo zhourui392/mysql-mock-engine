@@ -1,0 +1,10 @@
+-- T8 MyBatis-Plus 专用表：自增主键 + 逻辑删除 + 自动填充目标列
+CREATE TABLE `t_mp_user` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `name` VARCHAR(64) NOT NULL COMMENT '名称',
+  `amount` DECIMAL(18,2) DEFAULT NULL COMMENT '金额',
+  `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删 0/1',
+  `created_by` VARCHAR(64) DEFAULT NULL COMMENT '填充列',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='MP 测试';

@@ -12,6 +12,35 @@ final class MysqlTypeMapper {
     private MysqlTypeMapper() {
     }
 
+    /**
+     * CAST 类型名：UPDATE/INSERT 改写为 internal SELECT 时，为裸动态参数锚定目标列类型
+     * （无上下文的 ? 无法通过校验）。
+     *
+     * @param column 目标列
+     * @return Calcite SQL 类型名（如 BIGINT / DECIMAL(18, 2) / VARCHAR）
+     */
+    static String castTypeName(ColumnDefinition column) {
+        switch (column.type()) {
+            case DECIMAL:
+                int precision = column.precision() > 0 ? column.precision() : 10;
+                int scale = Math.max(column.scale(), 0);
+                return "DECIMAL(" + precision + ", " + scale + ")";
+            case FLOAT:
+            case DOUBLE:
+                return "DOUBLE";
+            case CHAR:
+                return "CHAR";
+            case DATE:
+                return "DATE";
+            case DATETIME:
+            case TIMESTAMP:
+                return "TIMESTAMP";
+            default:
+                // 整型（BIGINT）与字符串族（VARCHAR，不设长度避免截断语义）
+                return sqlTypeName(column.type()) == SqlTypeName.BIGINT ? "BIGINT" : "VARCHAR";
+        }
+    }
+
     static RelDataType toRelType(ColumnDefinition column, RelDataTypeFactory factory) {
         SqlTypeName typeName = sqlTypeName(column.type());
         RelDataType type;
@@ -33,6 +62,12 @@ final class MysqlTypeMapper {
                 type = factory.createSqlType(typeName);
                 break;
         }
+        if (column.type().category() == cn.vv.test.mysqlmock.schema.MysqlType.Category.STRING) {
+            // MySQL utf8mb4 全 unicode；不设 UTF-8 时中文字面量会被 CAST 到 ISO-8859-1 失败
+            type = factory.createTypeWithCharsetAndCollation(type,
+                    java.nio.charset.StandardCharsets.UTF_8,
+                    org.apache.calcite.sql.SqlCollation.IMPLICIT);
+        }
         boolean nullable = !column.notNull() && !column.primaryKey() && !column.autoIncrement();
         return factory.createTypeWithNullability(type, nullable);
     }
@@ -40,15 +75,13 @@ final class MysqlTypeMapper {
     private static SqlTypeName sqlTypeName(MysqlType type) {
         switch (type) {
             case TINYINT:
-                return SqlTypeName.TINYINT;
             case BOOLEAN:
-                return SqlTypeName.BOOLEAN;
             case SMALLINT:
-                return SqlTypeName.SMALLINT;
             case MEDIUMINT:
             case INT:
-                return SqlTypeName.INTEGER;
             case BIGINT:
+                // 整型存储侧统一 Long（MysqlValueCoercer）；映射 INTEGER/TINYINT 的
+                // enumerable 内部类型是 Integer，直接喂 Long 会 ClassCastException
                 return SqlTypeName.BIGINT;
             case DECIMAL:
                 return SqlTypeName.DECIMAL;

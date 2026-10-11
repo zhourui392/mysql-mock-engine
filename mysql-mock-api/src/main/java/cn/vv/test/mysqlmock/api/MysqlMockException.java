@@ -41,6 +41,12 @@ public class MysqlMockException extends RuntimeException {
         return new MysqlMockException("You have an error in your SQL syntax: " + detail, ER_PARSE_ERROR, "42000");
     }
 
+    /** strict：解析失败，保留底层 cause 便于定位。 */
+    public static MysqlMockException parseError(String detail, Throwable cause) {
+        return new MysqlMockException("You have an error in your SQL syntax: " + detail,
+                ER_PARSE_ERROR, "42000", cause);
+    }
+
     /** strict：未支持特性显式失败，不静默（R9）。 */
     public static MysqlMockException unsupported(String detail) {
         return new MysqlMockException("This version of mysql-mock doesn't yet support: " + detail,

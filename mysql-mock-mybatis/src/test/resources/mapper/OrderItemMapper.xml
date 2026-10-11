@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.vv.test.mysqlmock.mybatis.order.OrderItemMapper">
+
+    <resultMap id="orderItemMap" type="cn.vv.test.mysqlmock.mybatis.order.OrderItem">
+        <id property="id" column="id"/>
+        <result property="orderId" column="order_id"/>
+        <result property="sku" column="sku"/>
+        <result property="qty" column="qty"/>
+        <result property="price" column="price"/>
+    </resultMap>
+
+    <sql id="allColumns">id, order_id, sku, qty, price</sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_order_item (order_id, sku, qty, price)
+        VALUES (#{orderId}, #{sku}, #{qty}, #{price})
+    </insert>
+
+    <select id="selectById" resultMap="orderItemMap">
+        SELECT <include refid="allColumns"/>
+        FROM t_order_item
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByCondition" resultMap="orderItemMap">
+        SELECT <include refid="allColumns"/>
+        FROM t_order_item
+        <where>
+            <if test="minQty != null">
+                AND qty &gt;= #{minQty}
+            </if>
+            <if test="sku != null and sku != ''">
+                AND sku = #{sku}
+            </if>
+            <if test="orderId != null">
+                AND order_id = #{orderId}
+            </if>
+        </where>
+        ORDER BY id
+    </select>
+
+    <update id="updatePrice">
+        UPDATE t_order_item SET price = #{price} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByOrderId">
+        DELETE FROM t_order_item WHERE order_id = #{orderId}
+    </delete>
+
+    <select id="sumPriceByOrderId" resultType="java.math.BigDecimal">
+        SELECT SUM(qty * price) FROM t_order_item WHERE order_id = #{orderId}
+    </select>
+</mapper>

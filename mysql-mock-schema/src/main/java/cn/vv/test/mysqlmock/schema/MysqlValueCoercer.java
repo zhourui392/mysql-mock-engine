@@ -20,7 +20,7 @@ public final class MysqlValueCoercer {
             case INT:
                 return coerceInteger(value);
             case DECIMAL:
-                return coerceDecimal(value);
+                return coerceDecimal(column, value);
             case DOUBLE:
                 return value instanceof Number
                         ? ((Number) value).doubleValue()
@@ -44,17 +44,22 @@ public final class MysqlValueCoercer {
         return Long.parseLong(String.valueOf(value).trim());
     }
 
-    private static BigDecimal coerceDecimal(Object value) {
+    /** DECIMAL 统一到列 scale（MySQL 语义：DECIMAL(p,s) 存储值固定 s 位小数）。 */
+    private static BigDecimal coerceDecimal(ColumnDefinition column, Object value) {
+        BigDecimal decimal;
         if (value instanceof BigDecimal) {
-            return (BigDecimal) value;
+            decimal = (BigDecimal) value;
+        } else if (value instanceof Long || value instanceof Integer) {
+            decimal = BigDecimal.valueOf(((Number) value).longValue());
+        } else if (value instanceof Number) {
+            decimal = new BigDecimal(String.valueOf(value));
+        } else {
+            decimal = new BigDecimal(String.valueOf(value).trim());
         }
-        if (value instanceof Long || value instanceof Integer) {
-            return BigDecimal.valueOf(((Number) value).longValue());
+        if (column.scale() > 0) {
+            return decimal.setScale(column.scale(), java.math.RoundingMode.HALF_UP);
         }
-        if (value instanceof Number) {
-            return new BigDecimal(String.valueOf(value));
-        }
-        return new BigDecimal(String.valueOf(value).trim());
+        return decimal;
     }
 
     private static Object coerceTemporal(ColumnDefinition column, Object value) {

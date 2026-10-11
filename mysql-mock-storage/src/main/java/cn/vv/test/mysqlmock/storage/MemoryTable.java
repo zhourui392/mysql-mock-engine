@@ -57,18 +57,17 @@ public final class MemoryTable {
     /** 整行替换（UPDATE 路径）：索引键原子迁移；返回值是否发生变化（changed 行数语义）。 */
     public synchronized boolean replaceRow(Row row, Object[] newValues) {
         checkNotNull(newValues);
+        Object[] oldValues = row.valuesCopy();
         removeUniqueKeys(row);
-        Object[] full = newValues.clone();
-        Row probe = new Row(row.rowId(), full);
+        row.replaceValues(newValues.clone());
         try {
-            checkAndAddUniqueKeys(probe);
+            checkAndAddUniqueKeys(row);
         } catch (RuntimeException e) {
+            row.replaceValues(oldValues);
             restoreUniqueKeys(row);
             throw e;
         }
-        boolean changed = !sameValues(row.valuesCopy(), full);
-        row.replaceValues(full);
-        return changed;
+        return !sameValues(oldValues, newValues);
     }
 
     public synchronized void delete(List<Row> targets) {
@@ -84,6 +83,16 @@ public final class MemoryTable {
             return null;
         }
         return index.get(IndexKey.of(columnValues));
+    }
+
+    /** 按稳定行 ID 查找（internal SELECT __rowid 定位）。 */
+    public synchronized Row rowById(long rowId) {
+        for (Row row : rows) {
+            if (row.rowId() == rowId) {
+                return row;
+            }
+        }
+        return null;
     }
 
     private void applyAutoIncrement(Object[] values) {
@@ -192,8 +201,10 @@ public final class MemoryTable {
         }
         nextAutoIncrement = snapshot.nextAutoIncrement;
         rowIdSequence = snapshot.rowIdSequence;
+        // 行 ID 从 1 重排：恢复后行号与初始装载一致，自增指针保持在快照位（后续插入继续编号）
+        long seq = 0;
         for (Object[] values : snapshot.values) {
-            Row row = new Row(++rowIdSequence, values);
+            Row row = new Row(++seq, values);
             rows.add(row);
             checkAndAddUniqueKeys(row);
         }

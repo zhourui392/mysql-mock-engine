@@ -10,12 +10,19 @@ public final class MysqlMockEngineBuilder {
     private static final String FACTORY_IMPL = "cn.vv.test.mysqlmock.calcite.MysqlMockEngineFactoryImpl";
 
     private String mysqlVersion = "8.0";
+    private AffectedRowsMode affectedRowsMode = AffectedRowsMode.MATCHED;
     private final List<String> schemaLocations = new ArrayList<>();
     private final List<String> datasetLocations = new ArrayList<>();
     private Clock clock = Clock.systemDefaultZone();
 
     public MysqlMockEngineBuilder mysqlVersion(String version) {
         this.mysqlVersion = version;
+        return this;
+    }
+
+    /** UPDATE 影响行数口径（D-10：默认 MATCHED）。 */
+    public MysqlMockEngineBuilder affectedRowsMode(AffectedRowsMode mode) {
+        this.affectedRowsMode = mode == null ? AffectedRowsMode.MATCHED : mode;
         return this;
     }
 
@@ -41,6 +48,10 @@ public final class MysqlMockEngineBuilder {
 
     public String mysqlVersion() {
         return mysqlVersion;
+    }
+
+    public AffectedRowsMode affectedRowsMode() {
+        return affectedRowsMode;
     }
 
     public List<String> schemaLocations() {

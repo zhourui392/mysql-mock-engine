@@ -18,6 +18,13 @@
         <dependency><groupId>org.mybatis</groupId><artifactId>mybatis</artifactId><scope>provided</scope></dependency>
         <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-core</artifactId><scope>provided</scope></dependency>
         <dependency><groupId>com.baomidou</groupId><artifactId>mybatis-plus-extension</artifactId><scope>provided</scope></dependency>
+        <!-- MP 3.4.3.4 的 mapper 注入路径需要 spring-core（MP 侧 optional，不随 provided 传递） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+            <version>5.1.20.RELEASE</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

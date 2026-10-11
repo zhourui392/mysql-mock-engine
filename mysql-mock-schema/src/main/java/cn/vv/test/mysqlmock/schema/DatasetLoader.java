@@ -4,11 +4,21 @@ import cn.vv.test.mysqlmock.api.Dataset;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
-/** YAML 数据集装载：表名 → 行列表（列名 → 值）。 */
+/**
+ * YAML 数据集装载：表名 → 行列表（列名 → 值）。
+ * <p>snakeyaml 把无时区时间戳按 UTC 解释为 java.util.Date；此处还原为 YAML 字面墙钟字符串，
+ * 由 MysqlValueCoercer 按本地时区解析，保证「写什么存什么」。
+ *
+ * @author zhourui(V33215020)
+ * @since 2026-10-11
+ */
 public final class DatasetLoader {
 
     @SuppressWarnings("unchecked")
@@ -32,12 +42,21 @@ public final class DatasetLoader {
                 }
                 Map<String, Object> normalized = new LinkedHashMap<>();
                 for (Map.Entry<String, Object> column : ((Map<String, Object>) row).entrySet()) {
-                    normalized.put(column.getKey().toLowerCase(), column.getValue());
+                    normalized.put(column.getKey().toLowerCase(), unwrapYamlDate(column.getValue()));
                 }
                 rows.add(normalized);
             }
             tables.put(entry.getKey().toLowerCase(), rows);
         }
         return new Dataset(tables);
+    }
+
+    private static Object unwrapYamlDate(Object value) {
+        if (!(value instanceof Date)) {
+            return value;
+        }
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        format.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return format.format((Date) value);
     }
 }
