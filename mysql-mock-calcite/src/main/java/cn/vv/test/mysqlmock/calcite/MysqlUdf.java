@@ -28,6 +28,28 @@ public final class MysqlUdf {
     }
 
     /**
+     * MySQL FIND_IN_SET(needle, list)：逗号分隔集合中的 1 起始下标，未命中 0，任一侧 NULL 返回 NULL。
+     *
+     * @param needle 待找值
+     * @param list   逗号分隔集合
+     * @return 1 起始下标或 0
+     */
+    public static Long findInSet(String needle, String list) {
+        if (needle == null || list == null) {
+            return null;
+        }
+        String target = needle;
+        int index = 1;
+        for (String part : list.split(",", -1)) {
+            if (part.equals(target)) {
+                return (long) index;
+            }
+            index++;
+        }
+        return 0L;
+    }
+
+    /**
      * MySQL DATE_FORMAT。
      *
      * @param timestamp 时间值

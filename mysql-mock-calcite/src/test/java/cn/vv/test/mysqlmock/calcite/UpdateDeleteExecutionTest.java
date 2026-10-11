@@ -173,7 +173,7 @@ class UpdateDeleteExecutionTest {
         assertEquals("y", row[2]);
     }
 
-    /** 可变时钟：验证 ON UPDATE CURRENT_TIMESTAMP 的时间来源。 */
+    /** 可变时钟：验证 ON UPDATE CURRENT_TIMESTAMP 的时间来源（跨测试类复用）。 */
     static final class MutableClock extends java.time.Clock {
 
         private volatile Instant instant;

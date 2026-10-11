@@ -179,6 +179,49 @@ class DifferentialCompatIT {
         return ok;
     }
 
+    // ---- 语义扩展差分：ODKU / REPLACE / INSERT..SELECT（影响行数口径对齐 Connector/J 默认） ----
+
+    @Test
+    void upsertSemanticsBothSides() throws Exception {
+        String ddl = "CREATE TABLE `t_upsert` (`id` BIGINT NOT NULL AUTO_INCREMENT,"
+                + "`uk` VARCHAR(32) NOT NULL,`qty` BIGINT NOT NULL DEFAULT 0,"
+                + "`memo` VARCHAR(64) NULL,"
+                + "`updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                + "PRIMARY KEY (`id`), UNIQUE KEY `uk_upsert` (`uk`))";
+        try (Statement statement = mysql.createStatement()) {
+            statement.execute("USE mockdiff");
+            statement.execute("DROP TABLE IF EXISTS `t_upsert`");
+            statement.execute(ddl);
+        }
+        engine.executeDdl(ddl);
+
+        // 插入路径 = 1
+        assertUpdateAgreement("ODKU-INSERT",
+                "INSERT INTO t_upsert (uk, qty) VALUES ('a', 10) ON DUPLICATE KEY UPDATE qty = qty + 1");
+        // 有变化更新 = 2（VALUES(col) 代入）
+        assertUpdateAgreement("ODKU-UPDATE-VALUES",
+                "INSERT INTO t_upsert (uk, qty) VALUES ('a', 5) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)");
+        // 值不变 = 1（found-rows 口径）
+        assertUpdateAgreement("ODKU-UNCHANGED",
+                "INSERT INTO t_upsert (uk, qty) VALUES ('a', 15) ON DUPLICATE KEY UPDATE qty = VALUES(qty)");
+        assertQueryAgreement("ODKU-STATE",
+                "SELECT uk, qty, memo FROM t_upsert ORDER BY id", true);
+
+        // REPLACE：无冲突 = 1；替换 = 2
+        assertUpdateAgreement("REPLACE-PLAIN",
+                "REPLACE INTO t_upsert (uk, qty) VALUES ('b', 1)");
+        assertUpdateAgreement("REPLACE-CONFLICT",
+                "REPLACE INTO t_upsert (uk, qty) VALUES ('b', 99)");
+        assertQueryAgreement("REPLACE-STATE",
+                "SELECT uk, qty FROM t_upsert ORDER BY id", true);
+
+        // INSERT .. SELECT
+        assertUpdateAgreement("INSERT-SELECT",
+                "INSERT INTO t_upsert (uk, qty) SELECT CONCAT('copy-', uk), qty FROM t_upsert WHERE uk = 'a'");
+        assertQueryAgreement("INSERT-SELECT-STATE",
+                "SELECT uk, qty FROM t_upsert ORDER BY id", true);
+    }
+
     // ---- 双侧状态重置（DML 用例间互不污染） ----
 
     @Test

@@ -67,17 +67,15 @@ class StrictModeTest {
         assertEquals(MysqlMockException.ER_NOT_SUPPORTED, e.vendorCode());
 
         assertThrows(MysqlMockException.class,
-                () -> engine.execute("REPLACE INTO dine_customer (id) VALUES (1)"));
-        assertThrows(MysqlMockException.class,
                 () -> engine.execute("TRUNCATE TABLE dine_customer"));
+        // 多表 JOIN 形态的 UPDATE（MySQL 方言）未支持：解析层显式失败
+        assertThrows(MysqlMockException.class,
+                () -> engine.execute("UPDATE dine_customer c JOIN t_order o ON o.customer_id = c.id "
+                        + "SET c.nickname = 'x'"));
     }
 
     @Test
-    void insertSelectAndGeneratedColumnWritesRejected() {
-        MysqlMockException select = assertThrows(MysqlMockException.class,
-                () -> engine.execute("INSERT INTO dine_customer (id) SELECT id FROM dine_customer"));
-        assertEquals(MysqlMockException.ER_NOT_SUPPORTED, select.vendorCode());
-
+    void generatedColumnWritesStillRejected() {
         MysqlMockException generated = assertThrows(MysqlMockException.class,
                 () -> engine.execute("UPDATE dine_customer SET occupies_unique = '1' WHERE id = 1"));
         assertEquals(MysqlMockException.ER_NOT_SUPPORTED, generated.vendorCode());

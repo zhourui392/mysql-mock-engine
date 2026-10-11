@@ -113,10 +113,12 @@ public final class MysqlMockEngineImpl implements MysqlMockEngine {
     @Override
     public UpdateResult execute(String sql, Object... params) {
         ensureOpen();
-        SqlNode node = parseSql(sql);
+        PreprocessedInsert pre = preprocessInsert(sql);
+        SqlNode node = parseSql(pre.mainSql);
         switch (node.getKind()) {
             case INSERT:
-                return modificationExecutor.executeInsert((SqlInsert) node, params);
+                return modificationExecutor.executeInsert((SqlInsert) node, params,
+                        pre.replaceInto, pre.onDuplicateClause);
             case UPDATE:
                 return modificationExecutor.executeUpdate((SqlUpdate) node, params);
             case DELETE:
@@ -124,6 +126,119 @@ public final class MysqlMockEngineImpl implements MysqlMockEngine {
             default:
                 throw MysqlMockException.unsupported("execute() 仅接受 INSERT/UPDATE/DELETE，收到 "
                         + node.getKind() + "（SQL: " + sql + "）");
+        }
+    }
+
+    /**
+     * MySQL 方言预处理：REPLACE [INTO] 改写为 INSERT INTO；ON DUPLICATE KEY UPDATE
+     * 从顶层（字符串/注释/括号外）切分为独立子句，主语句交 Calcite 解析。
+     */
+    private static PreprocessedInsert preprocessInsert(String sql) {
+        String main = sql;
+        boolean replaceInto = false;
+        java.util.regex.Matcher replace = java.util.regex.Pattern
+                .compile("(?is)^(\\s*)REPLACE\\s+(?:(INTO)\\s+)?").matcher(main);
+        if (replace.find()) {
+            replaceInto = true;
+            main = replace.replaceFirst("$1INSERT INTO ");
+        }
+        int[] split = findOnDuplicateKeyword(main);
+        String onDuplicateClause = null;
+        if (split != null) {
+            onDuplicateClause = main.substring(split[1]).trim();
+            main = main.substring(0, split[0]);
+        }
+        return new PreprocessedInsert(main, replaceInto, onDuplicateClause);
+    }
+
+    /** 顶层扫描 ON DUPLICATE KEY UPDATE；返回 {子句起点, 关键字终点}，未命中返回 null。 */
+    private static int[] findOnDuplicateKeyword(String sql) {
+        String[] words = {"ON", "DUPLICATE", "KEY", "UPDATE"};
+        int i = 0;
+        int n = sql.length();
+        while (i < n) {
+            char c = sql.charAt(i);
+            if (c == '\'' || c == '"' || c == '`') {
+                i = skipQuote(sql, i);
+                continue;
+            }
+            if (c == '-' && i + 1 < n && sql.charAt(i + 1) == '-'
+                    || c == '#'
+                    || c == '/' && i + 1 < n && sql.charAt(i + 1) == '*') {
+                i = skipComment(sql, i);
+                continue;
+            }
+            if (matchesWord(sql, i, words[0])) {
+                int pos = i;
+                int j = i + words[0].length();
+                boolean all = true;
+                for (int w = 1; w < words.length && all; w++) {
+                    j = skipSpaces(sql, j);
+                    if (!matchesWord(sql, j, words[w])) {
+                        all = false;
+                        break;
+                    }
+                    j += words[w].length();
+                }
+                if (all) {
+                    return new int[]{pos, j};
+                }
+            }
+            i++;
+        }
+        return null;
+    }
+
+    private static boolean matchesWord(String sql, int pos, String upperWord) {
+        if (pos + upperWord.length() > sql.length()) {
+            return false;
+        }
+        return sql.regionMatches(true, pos, upperWord, 0, upperWord.length());
+    }
+
+    private static int skipSpaces(String sql, int pos) {
+        while (pos < sql.length() && Character.isWhitespace(sql.charAt(pos))) {
+            pos++;
+        }
+        return pos;
+    }
+
+    private static int skipQuote(String sql, int start) {
+        char quote = sql.charAt(start);
+        int j = start + 1;
+        while (j < sql.length()) {
+            if (sql.charAt(j) == quote) {
+                if (j + 1 < sql.length() && sql.charAt(j + 1) == quote) {
+                    j += 2;
+                    continue;
+                }
+                return j + 1;
+            }
+            j++;
+        }
+        return j;
+    }
+
+    private static int skipComment(String sql, int start) {
+        char c = sql.charAt(start);
+        if (c == '/') {
+            int end = sql.indexOf("*/", start + 2);
+            return end < 0 ? sql.length() : end + 2;
+        }
+        int end = sql.indexOf('\n', start);
+        return end < 0 ? sql.length() : end + 1;
+    }
+
+    /** 预处理产物：改写后的主语句与 ODKU 子句。 */
+    private static final class PreprocessedInsert {
+        final String mainSql;
+        final boolean replaceInto;
+        final String onDuplicateClause;
+
+        PreprocessedInsert(String mainSql, boolean replaceInto, String onDuplicateClause) {
+            this.mainSql = mainSql;
+            this.replaceInto = replaceInto;
+            this.onDuplicateClause = onDuplicateClause;
         }
     }
 

@@ -135,6 +135,8 @@ final class MockCalciteSchema implements Schema {
             map.put("CURDATE", ScalarFunctionImpl.create(MysqlUdf.class.getMethod("curdate")));
             map.put("DATE_FORMAT", ScalarFunctionImpl.create(MysqlUdf.class.getMethod(
                     "date_format", java.sql.Timestamp.class, String.class)));
+            map.put("FIND_IN_SET", ScalarFunctionImpl.create(MysqlUdf.class.getMethod(
+                    "findInSet", String.class, String.class)));
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("UDF 方法缺失", e);
         }

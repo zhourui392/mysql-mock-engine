@@ -6,7 +6,7 @@ Spring Boot 2.1.3 / MyBatis-Plus 3.4.3.4 服务的 **JUnit + Mockito 纯单测**
 
 ## 状态
 
-阶段 1–4 完成（2026-10-11）：`mvn clean install` 全绿（98 tests）；差分兼容
+阶段 1–4 + 语义扩展完成（2026-10-11）：`mvn clean install` 全绿（112 tests）；差分兼容
 `mvn -pl mysql-mock-compatibility-tests test -Pcompat` 对照真实 MySQL（PASS 11/0，
 需 docker；本机基准 mysql:latest=9.5.0，CI 应钉 mysql:8.0 复跑）。
 
@@ -64,7 +64,9 @@ SqlSessionFactory factory = MysqlMockMybatis.builder(engine)
 ## 关键设计
 
 - DDL 解析走 ShardingSphere SQL Parser 5.3.2（钉版，仅作语法门禁）；SELECT 走
-  Calcite 1.42.0；INSERT/UPDATE/DELETE 全部自有执行器。
+  Calcite 1.42.0；INSERT/REPLACE/ON DUPLICATE KEY UPDATE/UPDATE/DELETE 全部自有执行器
+  （含 `INSERT ... SELECT` 与 `VALUES(col)` 引用，影响行数口径经真实 MySQL 差分对齐）；
+  函数白名单含 NOW/CURDATE/DATE_FORMAT/IFNULL/IF/FIND_IN_SET。
 - STORED 生成列必做（`GENERATED ALWAYS AS (...) STORED` 与简写两种语法）；
   外键 / CHECK / VIRTUAL / 清单外 collation 显式拒绝。
 - utf8mb4_general_ci / utf8mb4_unicode_ci：唯一键等值忽略大小写 + 尾随空格

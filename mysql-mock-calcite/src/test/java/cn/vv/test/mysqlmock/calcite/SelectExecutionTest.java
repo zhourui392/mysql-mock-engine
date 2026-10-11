@@ -88,6 +88,18 @@ class SelectExecutionTest {
     }
 
     @Test
+    void findInSetFunction() {
+        QueryResult result = engine.query(
+                "SELECT FIND_IN_SET('瓶', unit), FIND_IN_SET('箱', unit), "
+                        + "FIND_IN_SET(CAST(NULL AS VARCHAR), unit) "
+                        + "FROM vv_pc_sku_unit WHERE id = 11");
+        Object[] row = result.rows().get(0);
+        assertEquals(1L, row[0], "命中返回 1 起始下标");
+        assertEquals(0L, row[1], "未命中返回 0");
+        assertEquals(null, row[2], "任一侧 NULL 返回 NULL");
+    }
+
+    @Test
     void timestampSemanticsInSelect() {
         // 无精度 DATETIME：装载即按 MySQL 秒级四舍五入（差分对齐）
         QueryResult result = engine.query(
