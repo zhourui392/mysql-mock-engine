@@ -82,6 +82,18 @@ class StrictModeTest {
     }
 
     @Test
+    void groupConcatSeparatorAndDistinctRejected() {
+        // basic / ORDER BY 形态已支持（SelectExecutionTest 覆盖）；SEPARATOR 与 DISTINCT
+        // 形态在 Calcite 侧静默返回 NULL，引擎入口显式拒绝（R9，验证记录 19）
+        MysqlMockException separator = assertThrows(MysqlMockException.class,
+                () -> engine.query("SELECT GROUP_CONCAT(nickname SEPARATOR ';') FROM dine_customer"));
+        assertEquals(MysqlMockException.ER_NOT_SUPPORTED, separator.vendorCode());
+        MysqlMockException distinct = assertThrows(MysqlMockException.class,
+                () -> engine.query("SELECT GROUP_CONCAT(DISTINCT phone_dial) FROM dine_customer"));
+        assertEquals(MysqlMockException.ER_NOT_SUPPORTED, distinct.vendorCode());
+    }
+
+    @Test
     void dmlOnUnknownTableFailsWith1146() {
         MysqlMockException e = assertThrows(MysqlMockException.class,
                 () -> engine.execute("DELETE FROM no_such_table WHERE id = 1"));

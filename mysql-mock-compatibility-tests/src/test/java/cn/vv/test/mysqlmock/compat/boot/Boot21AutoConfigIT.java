@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -146,6 +147,31 @@ class Boot21AutoConfigIT {
             assertEquals(4L, engine.query("SELECT COUNT(*) FROM t_order").rows().get(0)[0],
                     "TestExecutionListener 在方法边界重放（D-06）");
         }
+    }
+
+    @Test
+    void replaceUnknownBeanNameFailsFast() {
+        org.springframework.context.annotation.AnnotationConfigApplicationContext context =
+                new org.springframework.context.annotation.AnnotationConfigApplicationContext();
+        java.util.Map<String, Object> props = new java.util.HashMap<String, Object>();
+        props.put("mysql-mock.enabled", "true");
+        props.put("mysql-mock.replace-datasource-bean", "ghostDs");
+        props.put("mysql-mock.schema[0]", "classpath:mysql/orders.sql");
+        context.getEnvironment().getPropertySources().addFirst(
+                new org.springframework.core.env.MapPropertySource("test", props));
+        context.register(ModeBApp.class);
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> context.refresh());
+        Throwable cause = e;
+        boolean mentionsTarget = false;
+        while (cause != null) {
+            if (cause.getMessage() != null && cause.getMessage().contains("ghostDs")) {
+                mentionsTarget = true;
+                break;
+            }
+            cause = cause.getCause();
+        }
+        assertTrue(mentionsTarget, "报错指向不存在的接管目标 Bean 名，实际: " + e.getMessage());
     }
 
     @Test

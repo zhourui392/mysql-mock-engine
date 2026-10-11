@@ -34,8 +34,13 @@ public class MysqlMockDataSourceReplacer
             return;
         }
         String target = environment.getProperty("mysql-mock.replace-datasource-bean");
-        if (target == null || target.trim().isEmpty() || !registry.containsBeanDefinition(target)) {
+        if (target == null || target.trim().isEmpty()) {
             return;
+        }
+        if (!registry.containsBeanDefinition(target)) {
+            // 显式配置指向不存在的 Bean：fail-fast（strict 哲学），不静默退回模式 B
+            throw new IllegalStateException("mysql-mock.replace-datasource-bean 指定的 Bean 不存在: "
+                    + target + "（enabled=true 时要求目标 Bean 先于本后处理器注册）");
         }
         org.springframework.beans.factory.config.BeanDefinition old = registry.getBeanDefinition(target);
         GenericBeanDefinition replacement = new GenericBeanDefinition();

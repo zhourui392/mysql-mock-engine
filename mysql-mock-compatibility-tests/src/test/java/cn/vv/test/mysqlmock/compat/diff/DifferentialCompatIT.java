@@ -222,6 +222,38 @@ class DifferentialCompatIT {
                 "SELECT uk, qty FROM t_upsert ORDER BY id", true);
     }
 
+    @Test
+    void dateColumnJoinAndProjection() throws Exception {
+        String ddl = "CREATE TABLE `t_date_j` (`id` BIGINT NOT NULL AUTO_INCREMENT,"
+                + "`d` DATE NULL, `dt` DATETIME(3) NULL, `tag` VARCHAR(16) NULL,"
+                + " PRIMARY KEY (`id`))";
+        String[] inserts = {
+                "INSERT INTO t_date_j (d, dt, tag) VALUES ('2026-10-01', '2026-10-01 12:30:45.123', 'a')",
+                "INSERT INTO t_date_j (d, dt, tag) VALUES ('2026-10-02', '2026-10-02 08:00:00.500', 'b')",
+                "INSERT INTO t_date_j (d, dt, tag) VALUES (NULL, NULL, 'c')",
+        };
+        try (Statement statement = mysql.createStatement()) {
+            statement.execute("USE mockdiff");
+            statement.execute("DROP TABLE IF EXISTS `t_date_j`");
+            statement.execute(ddl);
+            for (String insert : inserts) {
+                statement.execute(insert);
+            }
+        }
+        engine.executeDdl(ddl);
+        for (String insert : inserts) {
+            engine.execute(insert);
+        }
+        // JOIN + 多列投影（DATE/DATETIME(3)/NULL 混排，无 ORDER BY 归一排序比对）
+        assertQueryAgreement("DATE-JOIN",
+                "SELECT j.id, j.d, j.dt, j.tag, o.id FROM t_date_j j "
+                        + "JOIN t_order o ON o.id = j.id", false);
+        assertQueryAgreement("DATE-GROUP",
+                "SELECT j.d, COUNT(*) FROM t_date_j j GROUP BY j.d", false);
+        assertQueryAgreement("DATE-EQ",
+                "SELECT id, tag FROM t_date_j WHERE d = '2026-10-01'", true);
+    }
+
     // ---- 双侧状态重置（DML 用例间互不污染） ----
 
     @Test

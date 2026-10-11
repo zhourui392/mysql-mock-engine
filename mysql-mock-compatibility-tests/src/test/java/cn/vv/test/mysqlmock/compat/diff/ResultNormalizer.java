@@ -41,6 +41,12 @@ final class ResultNormalizer {
         if (value instanceof Timestamp) {
             return formatTimestamp((Timestamp) value);
         }
+        if (value instanceof java.time.LocalDateTime) {
+            return formatNanos(value.toString().replace('T', ' '));
+        }
+        if (value instanceof java.time.LocalDate || value instanceof java.time.LocalTime) {
+            return value.toString();
+        }
         if (value instanceof java.sql.Date) {
             return value.toString();
         }
@@ -72,9 +78,12 @@ final class ResultNormalizer {
         return lines;
     }
 
-    /** 毫秒为 0 时省略小数（MySQL DATETIME 显示形态）。 */
+    /** 统一 'yyyy-MM-dd HH:mm:ss[.SSS]'，毫秒三位补齐（协议表示归一）。 */
     private static String formatTimestamp(Timestamp timestamp) {
-        String text = timestamp.toString();
+        return formatNanos(timestamp.toString().replace('T', ' '));
+    }
+
+    private static String formatNanos(String text) {
         int dot = text.indexOf('.');
         if (dot < 0) {
             return text;
@@ -83,6 +92,14 @@ final class ResultNormalizer {
         if (millis.replaceAll("0+", "").isEmpty()) {
             return text.substring(0, dot);
         }
-        return text;
+        // .5 → .500（两侧精度位数差异归一）
+        if (millis.length() < 3) {
+            StringBuilder padded = new StringBuilder(millis);
+            while (padded.length() < 3) {
+                padded.append('0');
+            }
+            millis = padded.toString();
+        }
+        return text.substring(0, dot + 1) + millis;
     }
 }

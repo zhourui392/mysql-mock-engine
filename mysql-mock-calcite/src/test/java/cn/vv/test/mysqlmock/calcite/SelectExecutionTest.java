@@ -88,6 +88,13 @@ class SelectExecutionTest {
     }
 
     @Test
+    void groupConcatWithDefaultSeparator() {
+        QueryResult result = engine.query(
+                "SELECT GROUP_CONCAT(nickname ORDER BY id) FROM dine_customer");
+        assertEquals("Alex,Bob", result.rows().get(0)[0], "默认分隔符 ',' + ORDER BY 形态");
+    }
+
+    @Test
     void findInSetFunction() {
         QueryResult result = engine.query(
                 "SELECT FIND_IN_SET('瓶', unit), FIND_IN_SET('箱', unit), "

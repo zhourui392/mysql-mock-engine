@@ -56,10 +56,19 @@ final class MockCalciteTable extends AbstractTable implements ScannableTable {
         for (Row row : table.snapshotRows()) {
             Object[] values = row.valuesCopy();
             for (int i = 0; i < values.length; i++) {
+                // 时间类统一「本地墙钟按 UTC 计」发射：对齐 avatica accessor/参数层约定，
+                // 避免 JOIN/多列投影路径的 ±时区漂移（验证记录 3；DATE 同构，差分 DATE-JOIN 实证）
                 if (values[i] instanceof java.sql.Timestamp) {
                     java.sql.Timestamp ts = (java.sql.Timestamp) values[i];
                     values[i] = ts.getTime()
-                            + java.util.TimeZone.getDefault().getOffset(ts.getTime());  // TZPROBE-HACK-C
+                            + java.util.TimeZone.getDefault().getOffset(ts.getTime());
+                } else if (values[i] instanceof java.sql.Date) {
+                    // DATE 内部表示是 Integer epoch days（millis 会 CCE）：按「本地墙钟日」发射，
+                    // 对齐 avatica DATE accessor 的 UTC 日历（差分 DATE-JOIN 实证）
+                    java.sql.Date date = (java.sql.Date) values[i];
+                    long wallAsUtc = date.getTime()
+                            + java.util.TimeZone.getDefault().getOffset(date.getTime());
+                    values[i] = (int) java.util.concurrent.TimeUnit.MILLISECONDS.toDays(wallAsUtc);
                 }
             }
             if (withRowid) {

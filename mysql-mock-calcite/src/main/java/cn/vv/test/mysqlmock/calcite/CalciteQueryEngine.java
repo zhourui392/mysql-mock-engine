@@ -49,6 +49,7 @@ final class CalciteQueryEngine {
     }
 
     QueryResult executeSelect(String sql, Object... params) {
+        rejectUnsupportedGroupConcat(sql);
         synchronized (this) {
             try (PreparedStatement statement = connection.prepareStatement(
                     SqlCharsetRewriter.introduceUtf8(sql))) {
@@ -132,6 +133,105 @@ final class CalciteQueryEngine {
             }
             statement.setObject(i + 1, params[i]);
         }
+    }
+
+    /**
+     * GROUP_CONCAT 的 SEPARATOR / DISTINCT 形态在 Calcite 侧静默返回 NULL（R9 违例），
+     * 引擎在入口显式拒绝（验证记录 19）；basic 与 ORDER BY 形态已支持。
+     */
+    private static void rejectUnsupportedGroupConcat(String sql) {
+        int i = 0;
+        int n = sql.length();
+        while (i < n) {
+            char c = sql.charAt(i);
+            if (c == '\'' || c == '"' || c == '`') {
+                i = skipQuotedText(sql, i);
+                continue;
+            }
+            if (sql.regionMatches(true, i, "GROUP_CONCAT", 0, 12)) {
+                int open = skipSpaces(sql, i + 12);
+                if (open < n && sql.charAt(open) == '(') {
+                    int close = matchingParen(sql, open);
+                    String inner = sql.substring(open + 1, close);
+                    if (containsKeyword(inner, "SEPARATOR") || containsKeyword(inner, "DISTINCT")) {
+                        throw MysqlMockException.unsupported(
+                                "GROUP_CONCAT 的 SEPARATOR / DISTINCT 形态暂不支持（会静默返回 NULL，R9 显式拒绝）；"
+                                        + "可用 GROUP_CONCAT(x ORDER BY y) 替代（SQL: " + sql + "）");
+                    }
+                    i = close + 1;
+                    continue;
+                }
+            }
+            i++;
+        }
+    }
+
+    private static boolean containsKeyword(String text, String keyword) {
+        int i = 0;
+        int n = text.length();
+        while (i < n) {
+            char c = text.charAt(i);
+            if (c == '\'' || c == '"' || c == '`') {
+                i = skipQuotedText(text, i);
+                continue;
+            }
+            if (text.regionMatches(true, i, keyword, 0, keyword.length())
+                    && (i == 0 || !isWordChar(text.charAt(i - 1)))
+                    && (i + keyword.length() >= n || !isWordChar(text.charAt(i + keyword.length())))) {
+                return true;
+            }
+            i++;
+        }
+        return false;
+    }
+
+    private static boolean isWordChar(char c) {
+        return Character.isLetterOrDigit(c) || c == '_';
+    }
+
+    private static int skipSpaces(String sql, int pos) {
+        while (pos < sql.length() && Character.isWhitespace(sql.charAt(pos))) {
+            pos++;
+        }
+        return pos;
+    }
+
+    private static int skipQuotedText(String sql, int start) {
+        char quote = sql.charAt(start);
+        int j = start + 1;
+        while (j < sql.length()) {
+            if (sql.charAt(j) == quote) {
+                if (j + 1 < sql.length() && sql.charAt(j + 1) == quote) {
+                    j += 2;
+                    continue;
+                }
+                return j + 1;
+            }
+            j++;
+        }
+        return j;
+    }
+
+    private static int matchingParen(String text, int openIndex) {
+        int depth = 0;
+        int i = openIndex;
+        while (i < text.length()) {
+            char c = text.charAt(i);
+            if (c == '\'' || c == '"' || c == '`') {
+                i = skipQuotedText(text, i);
+                continue;
+            }
+            if (c == '(') {
+                depth++;
+            } else if (c == ')') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+            i++;
+        }
+        return text.length();
     }
 
     /** SQL 失败 → strict 异常（R9：不静默）；遍历 cause 链取校验器/解析器的具体错误。 */
