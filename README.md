@@ -6,7 +6,7 @@ Spring Boot 2.1.3 / MyBatis-Plus 3.4.3.4 服务的 **JUnit + Mockito 纯单测**
 
 ## 状态
 
-阶段 1–3 完成（2026-10-11，`mvn clean install` 全绿，94 tests）；阶段 4（Spring Boot
+阶段 1–3 完成（2026-10-11，`mvn clean install` 全绿，89 tests）；阶段 4（Spring Boot
 starter、差分兼容、发布）按方案后置。
 
 | 模块 | 内容 | 状态 |
