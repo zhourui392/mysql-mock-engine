@@ -11,10 +11,12 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.ScalarFunctionImpl;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -28,7 +30,7 @@ import java.util.Set;
  */
 final class MockCalciteSchema implements Schema {
 
-    private static final Map<String, org.apache.calcite.schema.ScalarFunction> UDFS = udfs();
+    private static final Map<String, List<org.apache.calcite.schema.ScalarFunction>> UDFS = udfs();
 
     private final SchemaCatalog catalog;
     private final Map<String, MemoryTable> tables;
@@ -94,8 +96,8 @@ final class MockCalciteSchema implements Schema {
 
     @Override
     public Collection<Function> getFunctions(String name) {
-        org.apache.calcite.schema.ScalarFunction udf = UDFS.get(name.toUpperCase());
-        return udf == null ? Collections.<Function>emptySet() : Collections.<Function>singleton(udf);
+        List<org.apache.calcite.schema.ScalarFunction> overloads = UDFS.get(name.toUpperCase());
+        return overloads == null ? Collections.<Function>emptySet() : new ArrayList<Function>(overloads);
     }
 
     @Override
@@ -128,18 +130,61 @@ final class MockCalciteSchema implements Schema {
         return this;
     }
 
-    private static Map<String, org.apache.calcite.schema.ScalarFunction> udfs() {
-        Map<String, org.apache.calcite.schema.ScalarFunction> map = new LinkedHashMap<>();
-        try {
-            map.put("NOW", ScalarFunctionImpl.create(MysqlUdf.class.getMethod("now")));
-            map.put("CURDATE", ScalarFunctionImpl.create(MysqlUdf.class.getMethod("curdate")));
-            map.put("DATE_FORMAT", ScalarFunctionImpl.create(MysqlUdf.class.getMethod(
-                    "date_format", java.sql.Timestamp.class, String.class)));
-            map.put("FIND_IN_SET", ScalarFunctionImpl.create(MysqlUdf.class.getMethod(
-                    "findInSet", String.class, String.class)));
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("UDF 方法缺失", e);
-        }
+    private static Map<String, List<org.apache.calcite.schema.ScalarFunction>> udfs() {
+        Map<String, List<org.apache.calcite.schema.ScalarFunction>> map = new LinkedHashMap<>();
+        register(map, MysqlUdf.class, "NOW", "now");
+        register(map, MysqlUdf.class, "CURDATE", "curdate");
+        register(map, MysqlUdf.class, "DATE_FORMAT", "date_format");
+        register(map, MysqlUdf.class, "FIND_IN_SET", "findInSet");
+        register(map, MysqlUdf.class, "STR_TO_DATE", "strToDate");
+        register(map, MysqlUdf.class, "TO_DAYS", "toDays");
+        register(map, MysqlUdf.class, "MAKEDATE", "makedate");
+        register(map, MysqlUdf.class, "MYSQL_DATEDIFF", "mysqlDatediff");
+        register(map, MysqlUdf.class, "WEEKDAY", "weekday");
+        register(map, MysqlUdf.class, "UNIX_TIMESTAMP", "unixTimestamp");
+        register(map, MysqlUdf.class, "FROM_UNIXTIME", "fromUnixtime");
+        register(map, MysqlUdf.class, "UTC_TIMESTAMP", "utcTimestamp");
+        register(map, MysqlUdf.class, "LOCATE", "locate");
+        register(map, MysqlUdf.class, "MYSQL_UUID", "mysqlUuid");
+        register(map, MysqlJsonUdf.class, "JSON_EXTRACT", "jsonExtract");
+        register(map, MysqlJsonUdf.class, "JSON_UNQUOTE", "jsonUnquote");
+        register(map, MysqlJsonUdf.class, "JSON_CONTAINS", "jsonContains");
+        register(map, MysqlJsonUdf.class, "JSON_CONTAINS_PATH", "jsonContainsPath");
+        register(map, MysqlJsonUdf.class, "JSON_SEARCH", "jsonSearch");
+        register(map, MysqlUdf.class, "MYSQL_TIME", "mysqlTime");
+        register(map, MysqlUdf.class, "MYSQL_STRCMP", "mysqlStrcmp");
+        register(map, MysqlUdf.class, "MYSQL_HEX", "mysqlHex");
+        register(map, MysqlUdf.class, "MYSQL_LAST_INSERT_ID", "mysqlLastInsertId");
+        register(map, MysqlJsonWriteUdf.class, "MYSQL_JSON_MODIFY", "mysqlJsonModify");
+        register(map, MysqlJsonWriteUdf.class, "MYSQL_JSON_REMOVE", "mysqlJsonRemove");
+        register(map, MysqlJsonWriteUdf.class, "MYSQL_TO_JSON", "mysqlToJson");
+        register(map, MysqlJsonWriteUdf.class, "MYSQL_JSON_FORMAT", "mysqlJsonFormat");
+        register(map, MysqlJsonWriteUdf.class, "MYSQL_JSON_EXACT", "mysqlJsonExact");
+        register(map, MysqlJsonWriteUdf.class, "MYSQL_JSON_KEYS", "mysqlJsonKeys");
+        register(map, MysqlJsonWriteUdf.class, "JSON_QUOTE", "jsonQuote");
+        register(map, MysqlJsonWriteUdf.class, "JSON_OVERLAPS", "jsonOverlaps");
         return Collections.unmodifiableMap(map);
+    }
+
+    /**
+     * 同名 public static 方法全部注册为重载（参数个数或类型不同）。
+     *
+     * @param map        注册表
+     * @param owner      UDF 所在类
+     * @param sqlName    SQL 函数名
+     * @param methodName Java 方法名
+     */
+    private static void register(Map<String, List<org.apache.calcite.schema.ScalarFunction>> map, Class<?> owner,
+                                 String sqlName, String methodName) {
+        List<org.apache.calcite.schema.ScalarFunction> overloads = new ArrayList<>();
+        for (Method method : owner.getMethods()) {
+            if (method.getName().equals(methodName)) {
+                overloads.add(ScalarFunctionImpl.create(method));
+            }
+        }
+        if (overloads.isEmpty()) {
+            throw new IllegalStateException("UDF 方法缺失: " + owner.getSimpleName() + "." + methodName);
+        }
+        map.put(sqlName, Collections.unmodifiableList(overloads));
     }
 }

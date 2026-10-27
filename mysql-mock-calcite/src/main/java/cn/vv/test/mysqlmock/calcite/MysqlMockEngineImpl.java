@@ -107,13 +107,22 @@ public final class MysqlMockEngineImpl implements MysqlMockEngine {
     @Override
     public QueryResult query(String sql, Object... params) {
         ensureOpen();
-        return queryEngine.executeSelect(sql, params);
+        String calciteSql = toCalciteDialect(sql);
+        return LastInsertIdContext.runWith(modificationExecutor::recordLastInsertId,
+                () -> queryEngine.executeSelect(calciteSql, JsonValueParams.encode(calciteSql, params)));
     }
 
     @Override
     public UpdateResult execute(String sql, Object... params) {
         ensureOpen();
-        PreprocessedInsert pre = preprocessInsert(sql);
+        return LastInsertIdContext.runWith(modificationExecutor::recordLastInsertId,
+                () -> executeModification(sql, params));
+    }
+
+    private UpdateResult executeModification(String sql, Object[] rawParams) {
+        String calciteSql = toCalciteDialect(sql);
+        Object[] params = JsonValueParams.encode(calciteSql, rawParams);
+        PreprocessedInsert pre = preprocessInsert(calciteSql);
         SqlNode node = parseSql(pre.mainSql);
         switch (node.getKind()) {
             case INSERT:
@@ -127,6 +136,16 @@ public final class MysqlMockEngineImpl implements MysqlMockEngine {
                 throw MysqlMockException.unsupported("execute() 仅接受 INSERT/UPDATE/DELETE，收到 "
                         + node.getKind() + "（SQL: " + sql + "）");
         }
+    }
+
+    /**
+     * MySQL 写法 → Calcite 写法：非保留字列名加反引号，再改写函数与运算符（顺序固定：改写器依赖列名已加引号）。
+     *
+     * @param sql 调用方 SQL
+     * @return Calcite 可解析的 SQL
+     */
+    private String toCalciteDialect(String sql) {
+        return MysqlDialectRewriter.rewrite(MysqlNonReservedQuoter.quote(sql), modificationExecutor.lastInsertId());
     }
 
     /**

@@ -9,6 +9,7 @@ public class MysqlMockException extends RuntimeException {
     public static final int ER_PARSE_ERROR = 1064;
     public static final int ER_NOT_SUPPORTED = 1235;
     public static final int ER_NO_DEFAULT_FOR_FIELD = 1364;
+    public static final int ER_INVALID_JSON_TEXT = 3140;
 
     private final int vendorCode;
     private final String sqlState;
@@ -52,6 +53,12 @@ public class MysqlMockException extends RuntimeException {
     public static MysqlMockException noDefaultValue(String column, String table) {
         return new MysqlMockException("Field '" + column + "' doesn't have a default value (table "
                 + table + ")", ER_NO_DEFAULT_FOR_FIELD, "HY000");
+    }
+
+    /** JSON 列写入非法 JSON 文本（MySQL 3140）。 */
+    public static MysqlMockException invalidJson(String column, Throwable cause) {
+        return new MysqlMockException("Invalid JSON text in value for column '" + column + "'", ER_INVALID_JSON_TEXT,
+                "22032", cause);
     }
 
     /** strict：未支持特性显式失败，不静默（R9）。 */

@@ -6,6 +6,7 @@ import cn.vv.test.mysqlmock.api.QueryResult;
 import cn.vv.test.mysqlmock.api.UpdateResult;
 import cn.vv.test.mysqlmock.schema.ColumnDefinition;
 import cn.vv.test.mysqlmock.schema.IndexDefinition;
+import cn.vv.test.mysqlmock.schema.MysqlType;
 import cn.vv.test.mysqlmock.schema.MysqlValueCoercer;
 import cn.vv.test.mysqlmock.schema.TableDefinition;
 import cn.vv.test.mysqlmock.storage.CollationNormalizer;
@@ -52,6 +53,7 @@ final class ModificationExecutor {
     private final GeneratedColumnEvaluator generatedColumnEvaluator;
     private final Clock clock;
     private final AffectedRowsMode affectedRowsMode;
+    private long lastInsertId;
 
     ModificationExecutor(Map<String, MemoryTable> tables, CalciteQueryEngine queryEngine,
                          GeneratedColumnEvaluator generatedColumnEvaluator, Clock clock,
@@ -95,6 +97,7 @@ final class ModificationExecutor {
 
         int affected = 0;
         List<Object> generatedKeys = new ArrayList<>();
+        Long firstGeneratedId = null;
         int total = rowNodes != null ? rowNodes.size() : selectRows.size();
         for (int rowIndex = 0; rowIndex < total; rowIndex++) {
             Object[] operandValues = rowNodes != null
@@ -121,7 +124,7 @@ final class ModificationExecutor {
                             assignments, params, sourceParamCount);
                     continue;
                 }
-                addKey(definition, table.insert(full), generatedKeys);
+                firstGeneratedId = insertRow(table, full, generatedKeys, firstGeneratedId);
                 affected++;
                 continue;
             }
@@ -131,12 +134,15 @@ final class ModificationExecutor {
                     table.delete(conflicts);
                     affected += conflicts.size();
                 }
-                addKey(definition, table.insert(full), generatedKeys);
+                firstGeneratedId = insertRow(table, full, generatedKeys, firstGeneratedId);
                 affected++;
                 continue;
             }
-            addKey(definition, table.insert(full), generatedKeys);
+            firstGeneratedId = insertRow(table, full, generatedKeys, firstGeneratedId);
             affected++;
+        }
+        if (firstGeneratedId != null) {
+            lastInsertId = firstGeneratedId;
         }
         return new UpdateResult(affected, generatedKeys);
     }
@@ -328,6 +334,49 @@ final class ModificationExecutor {
             }
         }
         return parts;
+    }
+
+    /**
+     * MySQL LAST_INSERT_ID()：最近一条生成过自增值的 INSERT 里第一个自动生成的值；显式给值的行不算。
+     *
+     * @return 自增值；还没有自动生成过时为 0
+     */
+    long lastInsertId() {
+        return lastInsertId;
+    }
+
+    void recordLastInsertId(long value) {
+        lastInsertId = value;
+    }
+
+    /**
+     * 插入一行并登记 generated key。
+     *
+     * @param table            目标表
+     * @param full             整行值
+     * @param generatedKeys    本语句的 generated key
+     * @param firstGeneratedId 本语句已自动生成的第一个自增值，没有时为 null
+     * @return 更新后的第一个自动生成的自增值
+     */
+    private Long insertRow(MemoryTable table, Object[] full, List<Object> generatedKeys, Long firstGeneratedId) {
+        TableDefinition definition = table.definition();
+        boolean isAutoValueMissing = isAutoValueMissing(definition, full);
+        Row row = table.insert(full);
+        addKey(definition, row, generatedKeys);
+        if (!isAutoValueMissing || firstGeneratedId != null) {
+            return firstGeneratedId;
+        }
+        Object key = generatedKey(definition, row);
+        return key instanceof Number ? Long.valueOf(((Number) key).longValue()) : null;
+    }
+
+    private static boolean isAutoValueMissing(TableDefinition definition, Object[] full) {
+        for (int i = 0; i < definition.columns().size(); i++) {
+            if (definition.columns().get(i).autoIncrement()) {
+                return full[i] == null || full[i] instanceof Number && ((Number) full[i]).longValue() == 0;
+            }
+        }
+        return false;
     }
 
     private void addKey(TableDefinition definition, Row row, List<Object> generatedKeys) {
@@ -905,6 +954,9 @@ final class ModificationExecutor {
     }
 
     private Object coerce(ColumnDefinition column, Object value) {
+        if (column.type() == MysqlType.JSON && value != null) {
+            return MysqlJsonPath.normalizeColumnValue(value, column.name());
+        }
         return MysqlValueCoercer.coerce(column, value);
     }
 

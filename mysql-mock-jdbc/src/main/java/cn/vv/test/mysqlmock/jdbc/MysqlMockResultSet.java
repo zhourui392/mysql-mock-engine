@@ -449,7 +449,55 @@ final class MysqlMockResultSet implements ResultSet {
         if (type.isInstance(value)) {
             return type.cast(value);
         }
-        throw SqlExceptions.of("无法转换为 " + type.getName() + ": " + value.getClass().getName());
+        Object converted = convertForGetObject(columnIndex, type);
+        if (converted == null) {
+            throw SqlExceptions.of("无法转换为 " + type.getName() + ": " + value.getClass().getName());
+        }
+        return type.cast(converted);
+    }
+
+    /**
+     * {@code getObject(int, Class)} 的类型转换，对齐 Connector/J 8：java.time 取自 DATE / DATETIME / TIME 列，
+     * Boolean 取自 TINYINT(1)，数值与字符串走同名 getter。MyBatis 3.5 的 LocalDateTimeTypeHandler 等走这条路径。
+     *
+     * @param columnIndex 列下标（从 1 开始）
+     * @param type        目标类型
+     * @return 转换结果；不支持的目标类型返回 null
+     * @throws java.sql.SQLException 列值无法按目标类型解析
+     */
+    private Object convertForGetObject(int columnIndex, Class<?> type) throws java.sql.SQLException {
+        if (type == java.time.LocalDateTime.class) {
+            return getTimestamp(columnIndex).toLocalDateTime();
+        }
+        if (type == java.time.LocalDate.class) {
+            return getDate(columnIndex).toLocalDate();
+        }
+        if (type == java.time.LocalTime.class) {
+            return getTime(columnIndex).toLocalTime();
+        }
+        if (type == Boolean.class) {
+            return getBoolean(columnIndex);
+        }
+        if (type == String.class) {
+            return getString(columnIndex);
+        }
+        return convertNumberForGetObject(columnIndex, type);
+    }
+
+    private Object convertNumberForGetObject(int columnIndex, Class<?> type) throws java.sql.SQLException {
+        if (type == Integer.class) {
+            return getInt(columnIndex);
+        }
+        if (type == Long.class) {
+            return getLong(columnIndex);
+        }
+        if (type == java.math.BigDecimal.class) {
+            return getBigDecimal(columnIndex);
+        }
+        if (type == Double.class) {
+            return getDouble(columnIndex);
+        }
+        return null;
     }
 
     @Override

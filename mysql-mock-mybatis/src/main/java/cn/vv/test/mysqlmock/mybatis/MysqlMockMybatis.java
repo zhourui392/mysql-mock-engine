@@ -6,6 +6,7 @@ import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.session.Configuration;
+import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 
 import java.io.InputStream;
@@ -78,6 +79,24 @@ public final class MysqlMockMybatis {
         // MP 模式也用 DefaultSqlSessionFactory：MybatisSqlSessionFactoryBuilder 会以默认
         // GlobalConfig 覆盖定制（含 MetaObjectHandler），注入方法与 MybatisConfiguration 无关
         return new org.apache.ibatis.session.defaults.DefaultSqlSessionFactory(configuration);
+    }
+
+    /**
+     * 构建 mybatis-spring 的 SqlSessionTemplate（以 SqlSession 接口返回）。
+     * <p>异常经生产同款 MyBatisExceptionTranslator 翻译：唯一键冲突（1062）得到
+     * {@code DuplicateKeyException}，应用层按 Spring 异常写的 catch 分支可在纯单测里走到。
+     * 无 Spring 事务时每次调用独立会话、自动提交。需要 classpath 提供 mybatis-spring 与 spring-jdbc。
+     *
+     * @return 带异常翻译的会话（线程安全，不需要 close）
+     */
+    public SqlSession buildSqlSessionTemplate() {
+        try {
+            Class.forName(SpringSqlSessionSupport.TEMPLATE_CLASS, false, MysqlMockMybatis.class.getClassLoader());
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException(
+                    "buildSqlSessionTemplate() 需要 classpath 提供 org.mybatis:mybatis-spring 与 spring-jdbc", e);
+        }
+        return SpringSqlSessionSupport.createTemplate(buildSqlSessionFactory());
     }
 
     private Configuration newConfiguration() {

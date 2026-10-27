@@ -49,7 +49,6 @@
             <version>2.1.3.RELEASE</version>
             <scope>test</scope>
         </dependency>
-        <dependency><groupId>cn.vv.test</groupId><artifactId>mysql-mock-junit5</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.mockito</groupId><artifactId>mockito-core</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.mockito</groupId><artifactId>mockito-junit-jupiter</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.mybatis</groupId><artifactId>mybatis</artifactId><scope>test</scope></dependency>
@@ -68,6 +67,11 @@
                          reactor 形态下内部模块传递链无视 exclusions 注入 classpath（Maven 已知行为），
                          排除原始 groovy 使 Spring 的 groovy 探测跳过（SS 解析门禁不依赖 groovy） -->
                     <excludedGroups>compat</excludedGroups>
+                    <!-- T13 读本次 reactor 产出的 junit5 发布 pom（shade 后的 dependency-reduced-pom），不读 ~/.m2：
+                         ~/.m2 在 test/verify 阶段可能缺失或是上一次 install 的旧工件，版本号也不必写死 -->
+                    <systemPropertyVariables>
+                        <mysqlmock.junit5.publishedPom>${project.basedir}/../mysql-mock-junit5/dependency-reduced-pom.xml</mysqlmock.junit5.publishedPom>
+                    </systemPropertyVariables>
                     <classpathDependencyExcludes>
                         <classpathDependencyExclude>org.apache.groovy:groovy</classpathDependencyExclude>
                     </classpathDependencyExcludes>

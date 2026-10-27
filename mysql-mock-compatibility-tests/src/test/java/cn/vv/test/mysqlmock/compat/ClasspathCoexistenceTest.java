@@ -32,12 +32,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ClasspathCoexistenceTest {
 
+    private static final String PUBLISHED_POM_PROPERTY = "mysqlmock.junit5.publishedPom";
+
     @Test
     void shadedArtifactPomHasNoRuntimeTransitives() throws Exception {
-        Path pom = Paths.get(System.getProperty("user.home"),
-                ".m2", "repository", "cn", "vv", "test", "mysql-mock-junit5",
-                "0.1.0-SNAPSHOT", "mysql-mock-junit5-0.1.0-SNAPSHOT.pom");
-        assertTrue(Files.exists(pom), "缺少安装工件 pom（请先 mvn install）: " + pom);
+        String publishedPom = System.getProperty(PUBLISHED_POM_PROPERTY);
+        assertNotNull(publishedPom, "缺少系统属性 " + PUBLISHED_POM_PROPERTY + "（由本模块 surefire 配置注入）");
+        Path pom = Paths.get(publishedPom);
+        assertTrue(Files.exists(pom), "缺少 junit5 发布 pom（请在本仓根目录跑 reactor 构建）: " + pom);
         Element dependencies = (Element) DocumentBuilderFactory.newInstance()
                 .newDocumentBuilder().parse(pom.toFile())
                 .getElementsByTagName("dependencies").item(0);

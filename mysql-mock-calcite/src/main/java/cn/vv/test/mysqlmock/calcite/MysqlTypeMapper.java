@@ -51,7 +51,8 @@ final class MysqlTypeMapper {
                 type = factory.createSqlType(SqlTypeName.DECIMAL, precision, scale);
                 break;
             case CHAR:
-                type = factory.createSqlType(SqlTypeName.CHAR,
+                // MySQL 读取 CHAR 时去掉尾随空格；Calcite 的 CHAR(n) 经过计算后会补满到 n 位，按 VARCHAR(n) 建模
+                type = factory.createSqlType(SqlTypeName.VARCHAR,
                         column.precision() > 0 ? column.precision() : 1);
                 break;
             case VARCHAR:
